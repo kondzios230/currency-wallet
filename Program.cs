@@ -20,6 +20,10 @@ builder.Services.AddScoped<IExchangeRatesService, ExchangeRatesService>();
 
 builder.Services.AddSingleton<IExchangeRatesDataService, ExchangeRateDataService>();
 
+builder.Services.AddScoped<IWalletService, WalletService>();
+
+builder.Services.AddSingleton<IWalletDataService, WalletDataService>();
+
 var app = builder.Build();
 
 app.UseRouting();
