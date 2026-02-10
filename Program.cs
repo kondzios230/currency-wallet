@@ -11,6 +11,11 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.WriteIndented = builder.Environment.IsDevelopment();
     });
 
+builder.Services.AddHttpClient("Nbp", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(5);
+});
+
 builder.Services.AddScoped<IExchangeRatesService, ExchangeRatesService>();
 
 builder.Services.AddSingleton<IExchangeRatesDataService, ExchangeRateDataService>();
