@@ -1,8 +1,8 @@
 using Wallet.Api.DTOs;
 
-namespace Wallet.Api.Data;
+namespace Wallet.Api.Services.Interfaces;
 
-public interface IWalletDataService
+public interface IWalletService
 {
     Task<WalletDto> CreateWallet(WalletDto data);
 }

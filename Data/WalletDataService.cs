@@ -1,19 +1,21 @@
+using Microsoft.EntityFrameworkCore;
+using Wallet.Api.Data.Interfaces;
+using Wallet.Api.Data.Models;
 using Wallet.Api.DTOs;
 
 namespace Wallet.Api.Data;
 
 public sealed class WalletDataService : IWalletDataService
 {
-    private readonly Dictionary<string, WalletDto> _wallets = new();
+    private readonly AppDbContext _context;
 
-    public Task<WalletDto> CreateWallet(WalletDto data)
+    public WalletDataService(AppDbContext context)
     {
-        if (_wallets.ContainsKey(data.WalletName))
-        {
-            throw new InvalidOperationException($"Wallet with name {data.WalletName} already exists.");
-        }
+        _context = context;
+    }
 
-        _wallets[data.WalletName] = data;
-        return Task.FromResult(data);
+    public Task SaveWallet(WalletDto data)
+    {
+        throw new NotImplementedException();
     }
 }

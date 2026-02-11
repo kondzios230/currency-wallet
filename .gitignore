@@ -2,3 +2,7 @@
 /obj
 
 .ds_store
+
+*.db
+*.db-shm
+*.db-wal

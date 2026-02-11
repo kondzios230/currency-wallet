@@ -1,5 +1,6 @@
-using Wallet.Api.Data;
+using Wallet.Api.Data.Interfaces;
 using Wallet.Api.DTOs;
+using Wallet.Api.Services.Interfaces;
 
 namespace Wallet.Api.Services;
 
@@ -14,6 +15,6 @@ public class WalletService : IWalletService
 
     public async Task<WalletDto> CreateWallet(WalletDto data)
     {
-        return await _walletDataService.CreateWallet(data);
+        throw new Exception();
     }
 }
