@@ -1,9 +1,7 @@
-using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Wallet.Api.Data.Interfaces;
 using Wallet.Api.Data.Models;
-using Wallet.Api.DTOs;
 
 namespace Wallet.Api.Data;
 
@@ -28,17 +26,17 @@ public sealed class ExchangeRateDataService : IExchangeRatesDataService
         _context = context;
     }
 
-    public async Task<IReadOnlyList<ExchangeRateDto>> GetExchangeRatesFromDB()
+    public async Task<IReadOnlyList<ExchangeRateEntity>> GetExchangeRatesFromDB()
     {
         var entities = await _context.ExchangeRates.AsNoTracking().ToListAsync();
-        return entities.Select(e => new ExchangeRateDto
+        return entities.Select(e => new ExchangeRateEntity
         {
             CurrencyCode = e.CurrencyCode,
-            ExchangeRate = e.Rate
+            Rate = e.Rate
         }).ToList();
     }
 
-    public async Task<IReadOnlyList<ExchangeRateDto>> GetExchangeRatesFromNbp()
+    public async Task<IReadOnlyList<ExchangeRateEntity>> GetExchangeRatesFromNbp()
     {
         var client = _httpClientFactory.CreateClient(HttpClientName);
         try
@@ -48,17 +46,17 @@ public sealed class ExchangeRateDataService : IExchangeRatesDataService
             var tables = await response.Content.ReadFromJsonAsync<NbpApiResponse[]>(JsonOptions);
             if (tables is null || tables.Length == 0)
             {
-                return new List<ExchangeRateDto>();
+                return new List<ExchangeRateEntity>();
             }
 
             var table = tables.First();
-            var rates = new List<ExchangeRateDto>();
+            var rates = new List<ExchangeRateEntity>();
             foreach (var r in table.Rates)
             {
-                rates.Add(new ExchangeRateDto
+                rates.Add(new ExchangeRateEntity
                 {
                     CurrencyCode = r.Code,
-                    ExchangeRate = r.Mid
+                    Rate = r.Mid
                 });
             }
 
@@ -74,17 +72,22 @@ public sealed class ExchangeRateDataService : IExchangeRatesDataService
         }
     }
 
-    public async Task SaveExchangeRatesAsync(IReadOnlyList<ExchangeRateDto> exchangeRates)
+    public async Task SaveExchangeRatesAsync(IReadOnlyList<ExchangeRateEntity> exchangeRates)
     {
         await _context.ExchangeRates.ExecuteDeleteAsync();
 
         var entities = exchangeRates.Select(dto => new ExchangeRateEntity
         {
             CurrencyCode = dto.CurrencyCode,
-            Rate = dto.ExchangeRate
+            Rate = dto.Rate
         });
 
         await _context.ExchangeRates.AddRangeAsync(entities);
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<bool> DoesCurrencyExists(string currencyCode)
+    {
+        return await _context.ExchangeRates.AnyAsync(e => e.CurrencyCode == currencyCode);
     }
 }

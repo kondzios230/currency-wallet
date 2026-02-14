@@ -1,5 +1,5 @@
 
-namespace Wallet.Api.DTOs;
+namespace Wallet.Api.Services.Models;
 
 public class ExchangeRateDto
 {

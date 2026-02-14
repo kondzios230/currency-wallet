@@ -1,12 +1,14 @@
-using Wallet.Api.DTOs;
+using Wallet.Api.Data.Models;
 
 namespace Wallet.Api.Data.Interfaces;
 
 public interface IExchangeRatesDataService
 {
-    Task<IReadOnlyList<ExchangeRateDto>> GetExchangeRatesFromDB();
+    Task<IReadOnlyList<ExchangeRateEntity>> GetExchangeRatesFromDB();
 
-    Task<IReadOnlyList<ExchangeRateDto>> GetExchangeRatesFromNbp();
+    Task<IReadOnlyList<ExchangeRateEntity>> GetExchangeRatesFromNbp();
 
-    Task SaveExchangeRatesAsync(IReadOnlyList<ExchangeRateDto> exchangeRates);
+    Task SaveExchangeRatesAsync(IReadOnlyList<ExchangeRateEntity> exchangeRates);
+
+    Task<bool> DoesCurrencyExists(string currencyCode);
 }

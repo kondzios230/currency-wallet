@@ -1,6 +1,7 @@
 using Wallet.Api.Data.Interfaces;
-using Wallet.Api.DTOs;
+using Wallet.Api.Data.Models;
 using Wallet.Api.Services.Interfaces;
+using Wallet.Api.Services.Models;
 
 namespace Wallet.Api.Services;
 
@@ -18,11 +19,34 @@ public class ExchangeRatesService : IExchangeRatesService
     {
         var rates = await _exchangeRateDataService.GetExchangeRatesFromNbp();
         await _exchangeRateDataService.SaveExchangeRatesAsync(rates);
-        return rates;
+
+        return ConvertToDto(rates);
     }
 
     public async Task<IReadOnlyList<ExchangeRateDto>> GetExchangeRates()
     {
-        return await _exchangeRateDataService.GetExchangeRatesFromDB();
+        var dbRates = await _exchangeRateDataService.GetExchangeRatesFromDB();
+        if (!dbRates.Any())
+        {
+            return await RefreshExchangeRates();
+        }
+
+        return ConvertToDto(dbRates);
+    }
+
+    public async Task<bool> DoesCurrencyExists(string currencyCode)
+    {
+        return await _exchangeRateDataService.DoesCurrencyExists(currencyCode);
+    }
+
+    private List<ExchangeRateDto> ConvertToDto(IReadOnlyList<ExchangeRateEntity> rates)
+    {
+        var list = new List<ExchangeRateDto>();
+        foreach (var item in rates)
+        {
+            list.Add(new ExchangeRateDto { CurrencyCode = item.CurrencyCode, ExchangeRate = item.Rate });
+        }
+
+        return list;
     }
 }
