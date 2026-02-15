@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Wallet.Api.Controllers.Models;
 using Wallet.Api.Services.Interfaces;
 
@@ -80,10 +79,6 @@ public class WalletController : ControllerBase
             var row = await _walletService.TopUpWallet(request.WalletId, request.CurrencyCode, request.Amount);
             return Ok(row);
         }
-        catch (DbUpdateConcurrencyException)
-        {
-            return Conflict("The wallet was modified by another operation. Please refresh and try again.");
-        }
         catch (InvalidOperationException ex)
         {
             return ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase)
@@ -105,10 +100,6 @@ public class WalletController : ControllerBase
 
             var row = await _walletService.WithdrawFromWallet(request.WalletId, request.CurrencyCode, request.Amount);
             return row == null ? NoContent() : Ok(row);
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            return Conflict("The wallet was modified by another operation. Please refresh and try again.");
         }
         catch (InvalidOperationException ex)
         {
@@ -132,10 +123,6 @@ public class WalletController : ControllerBase
                 request.TargetCurrencyCode,
                 request.SourceAmount);
             return Ok();
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            return Conflict("The wallet was modified by another operation. Please refresh and try again.");
         }
         catch (InvalidOperationException ex)
         {

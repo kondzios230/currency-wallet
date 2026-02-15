@@ -53,36 +53,23 @@ public class WalletService : IWalletService
     {
         var roundedAmount = Math.Round(amount, 2);
 
-        var wallet = await _walletDataService.GetWallet(walletId);
-        if (wallet == null)
+        if (!await _walletDataService.WalletExists(walletId))
             throw new InvalidOperationException("Wallet not found.");
 
-        var existingRow = wallet.Rows.FirstOrDefault(r => r.CurrencyCode == currencyCode);
-        if (existingRow != null)
-        {
-            existingRow.Amount += roundedAmount;
-        }
-        else
-        {
-            var newRow = new WalletRowEntity
-            {
-                Id = Guid.NewGuid(),
-                WalletId = walletId,
-                CurrencyCode = currencyCode,
-                Amount = roundedAmount
-            };
-            wallet.Rows.Add(newRow);
-        }
+        var rowsUpdated = await _walletDataService.IncrementWalletRowAmount(walletId, currencyCode, roundedAmount);
+        if (rowsUpdated == 0)
+            await _walletDataService.AddWalletRow(walletId, currencyCode, roundedAmount);
 
-        await _walletDataService.SaveChanges();
+        var row = await _walletDataService.GetWalletRow(walletId, currencyCode);
+        if (row == null)
+            throw new InvalidOperationException("Wallet row could not be read after update.");
 
-        var updatedRow = wallet.Rows.First(r => r.CurrencyCode == currencyCode);
         return new WalletRowDto
         {
-            Id = updatedRow.Id,
-            WalletId = updatedRow.WalletId,
-            CurrencyCode = updatedRow.CurrencyCode,
-            Amount = updatedRow.Amount
+            Id = row.Id,
+            WalletId = row.WalletId,
+            CurrencyCode = row.CurrencyCode,
+            Amount = row.Amount
         };
     }
 
@@ -122,8 +109,7 @@ public class WalletService : IWalletService
 
     public async Task ExchangeAsync(Guid walletId, string sourceCurrencyCode, string targetCurrencyCode, decimal sourceAmount)
     {
-        var wallet = await _walletDataService.GetWallet(walletId);
-        if (wallet == null)
+        if (!await _walletDataService.WalletExists(walletId))
             throw new InvalidOperationException("Wallet not found.");
 
         if (string.Equals(sourceCurrencyCode, targetCurrencyCode, StringComparison.OrdinalIgnoreCase))
@@ -133,10 +119,6 @@ public class WalletService : IWalletService
         if (!await _exchangeRatesService.DoesCurrencyExists(targetCurrencyCode))
             throw new InvalidOperationException("Target currency code is invalid.");
 
-        var sourceRow = wallet.Rows.FirstOrDefault(r => r.CurrencyCode == sourceCurrencyCode);
-        if (sourceRow == null)
-            throw new InvalidOperationException("Source currency does not exist in this wallet.");
-
         var rateSource = await _exchangeRatesService.GetExchangeRate(sourceCurrencyCode);
         var rateTarget = await _exchangeRatesService.GetExchangeRate(targetCurrencyCode);
         if (rateSource == null)
@@ -144,32 +126,21 @@ public class WalletService : IWalletService
         if (rateTarget == null)
             throw new InvalidOperationException("Exchange rate not available for target currency.");
 
-        var roundedAmount = Math.Round(sourceAmount, 2);
-        if (sourceRow.Amount < roundedAmount)
-            throw new InvalidOperationException("Insufficient balance. Amount cannot exceed the current wallet balance for the source currency.");
-
-        var plnAmount = roundedAmount * rateSource.Value;
+        var roundedSourceAmount = Math.Round(sourceAmount, 2);
+        var plnAmount = roundedSourceAmount * rateSource.Value;
         var targetAmount = Math.Round(plnAmount / rateTarget.Value, 2);
 
-        sourceRow.Amount -= roundedAmount;
-        if (sourceRow.Amount == 0)
-            wallet.Rows.Remove(sourceRow);
+        var rowsUpdated = await _walletDataService.DecrementWalletRowAmount(walletId, sourceCurrencyCode, roundedSourceAmount);
+        if (rowsUpdated == 0)
+            throw new InvalidOperationException("Source currency does not exist in this wallet or insufficient balance.");
 
-        var targetRow = wallet.Rows.FirstOrDefault(r => r.CurrencyCode == targetCurrencyCode);
-        if (targetRow != null)
-            targetRow.Amount += targetAmount;
-        else
-        {
-            wallet.Rows.Add(new WalletRowEntity
-            {
-                Id = Guid.NewGuid(),
-                WalletId = walletId,
-                CurrencyCode = targetCurrencyCode,
-                Amount = targetAmount
-            });
-        }
+        var sourceRow = await _walletDataService.GetWalletRow(walletId, sourceCurrencyCode);
+        if (sourceRow != null && sourceRow.Amount == 0)
+            await _walletDataService.RemoveWalletRow(sourceRow.Id);
 
-        await _walletDataService.SaveChanges();
+        var targetRowsUpdated = await _walletDataService.IncrementWalletRowAmount(walletId, targetCurrencyCode, targetAmount);
+        if (targetRowsUpdated == 0)
+            await _walletDataService.AddWalletRow(walletId, targetCurrencyCode, targetAmount);
     }
 
     private WalletDto ConvertToDto(WalletEntity entity)

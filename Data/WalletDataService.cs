@@ -62,11 +62,37 @@ public sealed class WalletDataService : IWalletDataService
         return deleted > 0;
     }
 
+    public async Task<bool> WalletExists(Guid id)
+    {
+        return await _context.Wallets.AnyAsync(w => w.Id == id);
+    }
+
     public async Task<WalletEntity?> GetWallet(Guid id)
     {
         return await _context.Wallets
             .Include(w => w.Rows)
             .FirstOrDefaultAsync(w => w.Id == id);
+    }
+
+    public async Task<WalletRowEntity?> GetWalletRow(Guid walletId, string currencyCode)
+    {
+        return await _context.WalletRows
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.WalletId == walletId && r.CurrencyCode == currencyCode);
+    }
+
+    public async Task<int> IncrementWalletRowAmount(Guid walletId, string currencyCode, decimal amount)
+    {
+        return await _context.WalletRows
+            .Where(r => r.WalletId == walletId && r.CurrencyCode == currencyCode)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.Amount, r => r.Amount + amount));
+    }
+
+    public async Task<int> DecrementWalletRowAmount(Guid walletId, string currencyCode, decimal amount)
+    {
+        return await _context.WalletRows
+            .Where(r => r.WalletId == walletId && r.CurrencyCode == currencyCode && r.Amount >= amount)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.Amount, r => r.Amount - amount));
     }
 
     public async Task<IReadOnlyList<WalletEntity>> GetAllWallets()
