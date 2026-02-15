@@ -8,43 +8,79 @@ namespace Wallet.Api.Services;
 public class ExchangeRatesService : IExchangeRatesService
 {
     private readonly IExchangeRatesDataService _exchangeRateDataService;
+    private readonly ExchangeRatesAccessLock _accessLock;
 
     public ExchangeRatesService(
-        IExchangeRatesDataService exchangeRateDataService)
+        IExchangeRatesDataService exchangeRateDataService,
+        ExchangeRatesAccessLock accessLock)
     {
         _exchangeRateDataService = exchangeRateDataService;
+        _accessLock = accessLock;
     }
 
     public async Task<IReadOnlyList<ExchangeRateDto>> RefreshExchangeRates()
     {
-        var rates = await _exchangeRateDataService.GetExchangeRatesFromNbp();
-        await _exchangeRateDataService.SaveExchangeRatesAsync(rates);
-
-        return ConvertToDto(rates);
+        var handle = await _accessLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            return await RefreshExchangeRatesCore().ConfigureAwait(false);
+        }
+        finally
+        {
+            handle.Dispose();
+        }
     }
 
     public async Task<IReadOnlyList<ExchangeRateDto>> GetExchangeRates()
     {
-        var dbRates = await _exchangeRateDataService.GetExchangeRatesFromDB();
-        if (!dbRates.Any())
+        var handle = await _accessLock.WaitAsync().ConfigureAwait(false);
+        try
         {
-            return await RefreshExchangeRates();
-        }
+            var dbRates = await _exchangeRateDataService.GetExchangeRatesFromDB();
+            if (!dbRates.Any())
+                return await RefreshExchangeRatesCore().ConfigureAwait(false);
 
-        return ConvertToDto(dbRates);
+            return ConvertToDto(dbRates);
+        }
+        finally
+        {
+            handle.Dispose();
+        }
     }
 
     public async Task<bool> DoesCurrencyExists(string currencyCode)
     {
-        return await _exchangeRateDataService.DoesCurrencyExists(currencyCode);
+        var handle = await _accessLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            return await _exchangeRateDataService.DoesCurrencyExists(currencyCode);
+        }
+        finally
+        {
+            handle.Dispose();
+        }
     }
 
     public async Task<decimal?> GetExchangeRate(string currencyCode)
     {
-        if (string.Equals(currencyCode, "PLN", StringComparison.OrdinalIgnoreCase))
-            return 1;
+        var handle = await _accessLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (string.Equals(currencyCode, "PLN", StringComparison.OrdinalIgnoreCase))
+                return 1;
+            return await _exchangeRateDataService.GetExchangeRateFromDb(currencyCode);
+        }
+        finally
+        {
+            handle.Dispose();
+        }
+    }
 
-        return await _exchangeRateDataService.GetExchangeRateFromDb(currencyCode);
+    private async Task<IReadOnlyList<ExchangeRateDto>> RefreshExchangeRatesCore()
+    {
+        var rates = await _exchangeRateDataService.GetExchangeRatesFromNbp();
+        await _exchangeRateDataService.SaveExchangeRatesAsync(rates);
+        return ConvertToDto(rates);
     }
 
     private List<ExchangeRateDto> ConvertToDto(IReadOnlyList<ExchangeRateEntity> rates)

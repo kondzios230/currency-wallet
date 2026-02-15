@@ -23,6 +23,7 @@ internal static class Program
         builder.Services.AddApiClient();
         builder.Services.AddDataServices(builder.Configuration);
         builder.Services.AddServices();
+        builder.Services.AddHostedService<ExchangeRatesRefreshHostedService>();
 
         var app = builder.Build();
 
@@ -55,6 +56,7 @@ internal static class Program
 
     public static IServiceCollection AddServices(this IServiceCollection services)
     {
+        services.AddSingleton<ExchangeRatesAccessLock>();
         services.AddScoped<IWalletService, WalletService>();
         services.AddScoped<IExchangeRatesService, ExchangeRatesService>();
 
