@@ -14,5 +14,7 @@ public interface IWalletDataService
 
     Task<WalletEntity?> GetWallet(Guid id);
 
+    Task<IReadOnlyList<WalletEntity>> GetAllWallets();
+
     Task SaveChanges();
 }

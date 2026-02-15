@@ -19,6 +19,22 @@ public class WalletController : ControllerBase
         _exchangeRatesService = exchangeRatesService;
     }
 
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<WalletModel>>> GetWallets()
+    {
+        var result = await _walletService.GetAllWallets();
+        return Ok(result);
+    }
+
+    [HttpGet("{walletId:guid}")]
+    public async Task<ActionResult<WalletModel>> GetWallet([FromRoute] Guid walletId)
+    {
+        var wallet = await _walletService.GetWallet(walletId);
+        if (wallet == null)
+            return NotFound("Wallet not found.");
+        return Ok(wallet);
+    }
+
     [HttpPost]
     public async Task<ActionResult<WalletModel>> CreateWallet([FromBody] WalletModel data)
     {

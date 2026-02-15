@@ -30,6 +30,18 @@ public class WalletService : IWalletService
         };
     }
 
+    public async Task<WalletDto?> GetWallet(Guid id)
+    {
+        var entity = await _walletDataService.GetWallet(id);
+        return entity == null ? null : ConvertToDto(entity);
+    }
+
+    public async Task<IReadOnlyList<WalletDto>> GetAllWallets()
+    {
+        var entities = await _walletDataService.GetAllWallets();
+        return entities.Select(ConvertToDto).ToList();
+    }
+
     public async Task RemoveWallet(Guid walletId)
     {
         var removed = await _walletDataService.RemoveWallet(walletId);
@@ -158,5 +170,21 @@ public class WalletService : IWalletService
         }
 
         await _walletDataService.SaveChanges();
+    }
+
+    private WalletDto ConvertToDto(WalletEntity entity)
+    {
+        return new WalletDto
+        {
+            Id = entity.Id,
+            WalletName = entity.Name,
+            Rows = entity.Rows.Select(r => new WalletRowDto
+            {
+                Id = r.Id,
+                WalletId = r.WalletId,
+                CurrencyCode = r.CurrencyCode,
+                Amount = r.Amount
+            }).ToList()
+        };
     }
 }

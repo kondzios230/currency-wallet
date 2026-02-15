@@ -69,6 +69,13 @@ public sealed class WalletDataService : IWalletDataService
             .FirstOrDefaultAsync(w => w.Id == id);
     }
 
+    public async Task<IReadOnlyList<WalletEntity>> GetAllWallets()
+    {
+        return await _context.Wallets
+            .Include(w => w.Rows)
+            .ToListAsync();
+    }
+
     public async Task SaveChanges()
     {
         await _context.SaveChangesAsync();
