@@ -23,4 +23,6 @@ public interface IWalletDataService
     Task<int> IncrementWalletRowAmount(Guid walletId, string currencyCode, decimal amount);
 
     Task<int> DecrementWalletRowAmount(Guid walletId, string currencyCode, decimal amount);
+
+    Task Exchange(Guid walletId, string sourceCurrencyCode, string targetCurrencyCode, decimal sourceAmount, decimal targetAmount);
 }

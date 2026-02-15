@@ -109,17 +109,7 @@ public class WalletService : IWalletService
         var plnAmount = roundedSourceAmount * rateSource.Value;
         var targetAmount = Math.Round(plnAmount / rateTarget.Value, 2);
 
-        var rowsUpdated = await _walletDataService.DecrementWalletRowAmount(walletId, sourceCurrencyCode, roundedSourceAmount);
-        if (rowsUpdated == 0)
-            throw new InvalidOperationException("Source currency does not exist in this wallet or insufficient balance.");
-
-        var sourceRow = await _walletDataService.GetWalletRow(walletId, sourceCurrencyCode);
-        if (sourceRow != null && sourceRow.Amount == 0)
-            await _walletDataService.RemoveWalletRow(sourceRow.Id);
-
-        var targetRowsUpdated = await _walletDataService.IncrementWalletRowAmount(walletId, targetCurrencyCode, targetAmount);
-        if (targetRowsUpdated == 0)
-            await _walletDataService.AddWalletRow(walletId, targetCurrencyCode, targetAmount);
+        await _walletDataService.Exchange(walletId, sourceCurrencyCode, targetCurrencyCode, roundedSourceAmount, targetAmount);
     }
 
     private WalletDto ConvertWalletToDto(WalletEntity entity)

@@ -7,10 +7,12 @@ namespace Wallet.Api.Data;
 public sealed class WalletDataService : IWalletDataService
 {
     private readonly AppDbContext _context;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public WalletDataService(AppDbContext context)
+    public WalletDataService(AppDbContext context, IUnitOfWork unitOfWork)
     {
         _context = context;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<WalletEntity?> CreateWallet(string name)
@@ -100,5 +102,24 @@ public sealed class WalletDataService : IWalletDataService
         return await _context.Wallets
             .Include(w => w.Rows)
             .ToListAsync();
+    }
+
+    public async Task Exchange(Guid walletId, string sourceCurrencyCode, string targetCurrencyCode, decimal sourceAmount, decimal targetAmount)
+    {
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
+
+        var rowsUpdated = await DecrementWalletRowAmount(walletId, sourceCurrencyCode, sourceAmount);
+        if (rowsUpdated == 0)
+            throw new InvalidOperationException("Source currency does not exist in this wallet or insufficient balance.");
+
+        var sourceRow = await GetWalletRow(walletId, sourceCurrencyCode);
+        if (sourceRow != null && sourceRow.Amount == 0)
+            await RemoveWalletRow(sourceRow.Id);
+
+        var targetRowsUpdated = await IncrementWalletRowAmount(walletId, targetCurrencyCode, targetAmount);
+        if (targetRowsUpdated == 0)
+            await AddWalletRow(walletId, targetCurrencyCode, targetAmount);
+
+        await transaction.CommitAsync();
     }
 }
