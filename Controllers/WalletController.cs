@@ -71,9 +71,6 @@ public class WalletController : ControllerBase
     {
         try
         {
-            if (request.Amount <= 0)
-                throw new InvalidOperationException("Amount must be positive.");
-
             if (!await _exchangeRatesService.DoesCurrencyExists(request.CurrencyCode))
                 throw new InvalidOperationException("Currency code is invalid.");
 
@@ -93,9 +90,6 @@ public class WalletController : ControllerBase
     {
         try
         {
-            if (request.Amount <= 0)
-                throw new InvalidOperationException("Amount must be positive.");
-
             if (!await _exchangeRatesService.DoesCurrencyExists(request.CurrencyCode))
                 throw new InvalidOperationException("Currency code is invalid.");
 
@@ -115,9 +109,6 @@ public class WalletController : ControllerBase
     {
         try
         {
-            if (request.SourceAmount <= 0)
-                throw new InvalidOperationException("Source amount must be positive.");
-
             await _walletService.ExchangeAsync(
                 request.WalletId,
                 request.SourceCurrencyCode,
