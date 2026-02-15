@@ -5,41 +5,69 @@ using Wallet.Api.Data.Interfaces;
 using Wallet.Api.Services;
 using Wallet.Api.Services.Interfaces;
 
-var builder = WebApplication.CreateBuilder(args);
+namespace Wallet.Api;
 
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
+internal static class Program
+{
+    private static void Main(string[] args)
     {
-        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
-        options.JsonSerializerOptions.WriteIndented = builder.Environment.IsDevelopment();
-    });
+        var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddHttpClient("Nbp", client =>
-{
-    client.Timeout = TimeSpan.FromSeconds(5);
-});
+        builder.Services.AddControllers()
+            .AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                options.JsonSerializerOptions.WriteIndented = builder.Environment.IsDevelopment();
+            });
 
-builder.Services.AddScoped<IExchangeRatesService, ExchangeRatesService>();
-builder.Services.AddScoped<IWalletService, WalletService>();
+        builder.Services.AddApiClient();
+        builder.Services.AddDataServices(builder.Configuration);
+        builder.Services.AddServices();
 
-builder.Services.AddScoped<IExchangeRatesDataService, ExchangeRateDataService>();
-builder.Services.AddDbContext<AppDbContext>(options =>
-{
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
-});
-builder.Services.AddScoped<IWalletDataService, WalletDataService>();
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+        var app = builder.Build();
 
-var app = builder.Build();
+        using (var scope = app.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            context.Database.EnsureCreated();
+        }
 
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    context.Database.EnsureCreated();
+        app.UseStaticFiles();
+        app.UseRouting();
+        app.MapControllers();
+
+        app.Run();
+    }
+
+    public static IServiceCollection AddDataServices(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddDbContext<AppDbContext>(options =>
+        {
+            options.UseSqlite(configuration.GetConnectionString("DefaultConnection"));
+        });
+
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IWalletDataService, WalletDataService>();
+        services.AddScoped<IExchangeRatesDataService, ExchangeRateDataService>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddServices(this IServiceCollection services)
+    {
+        services.AddScoped<IWalletService, WalletService>();
+        services.AddScoped<IExchangeRatesService, ExchangeRatesService>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddApiClient(this IServiceCollection services)
+    {
+        services.AddHttpClient("Nbp", client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(5);
+        });
+
+        return services;
+    }
 }
-
-app.UseStaticFiles();
-app.UseRouting();
-app.MapControllers();
-
-app.Run();

@@ -5,7 +5,6 @@ namespace Wallet.Api.Controllers.Models;
 public class ExchangeRequestModel
 {
     [Required(ErrorMessage = "Wallet ID is required.")]
-    [NonDefaultGuid(ErrorMessage = "Wallet ID must not be empty.")]
     public Guid WalletId { get; set; }
 
     [Required(ErrorMessage = "Source currency code is required.")]
