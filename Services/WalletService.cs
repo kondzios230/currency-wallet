@@ -22,24 +22,19 @@ public class WalletService : IWalletService
         if (entity == null)
             throw new InvalidOperationException("A wallet with this name already exists.");
 
-        return new WalletDto
-        {
-            Id = Guid.NewGuid(),
-            WalletName = entity.Name,
-            Rows = new List<WalletRowDto>()
-        };
+        return ConvertWalletToDto(entity);
     }
 
     public async Task<WalletDto?> GetWallet(Guid id)
     {
         var entity = await _walletDataService.GetWallet(id);
-        return entity == null ? null : ConvertToDto(entity);
+        return entity == null ? null : ConvertWalletToDto(entity);
     }
 
     public async Task<IReadOnlyList<WalletDto>> GetAllWallets()
     {
         var entities = await _walletDataService.GetAllWallets();
-        return entities.Select(ConvertToDto).ToList();
+        return entities.Select(ConvertWalletToDto).ToList();
     }
 
     public async Task RemoveWallet(Guid walletId)
@@ -64,47 +59,31 @@ public class WalletService : IWalletService
         if (row == null)
             throw new InvalidOperationException("Wallet row could not be read after update.");
 
-        return new WalletRowDto
-        {
-            Id = row.Id,
-            WalletId = row.WalletId,
-            CurrencyCode = row.CurrencyCode,
-            Amount = row.Amount
-        };
+        return ConvertWalletRowToDto(row);
     }
 
     public async Task<WalletRowDto?> WithdrawFromWallet(Guid walletId, string currencyCode, decimal amount)
     {
         var roundedAmount = Math.Round(amount, 2);
 
-        var wallet = await _walletDataService.GetWallet(walletId);
-        if (wallet == null)
+        if (!await _walletDataService.WalletExists(walletId))
             throw new InvalidOperationException("Wallet not found.");
 
-        var existingRow = wallet.Rows.FirstOrDefault(r => r.CurrencyCode == currencyCode);
-        if (existingRow == null)
-            throw new InvalidOperationException("Currency does not exist in this wallet.");
+        var rowsUpdated = await _walletDataService.DecrementWalletRowAmount(walletId, currencyCode, roundedAmount);
+        if (rowsUpdated == 0)
+            throw new InvalidOperationException("Currency does not exist in this wallet or insufficient balance.");
 
-        if (roundedAmount > existingRow.Amount)
-            throw new InvalidOperationException("Insufficient balance. Amount cannot exceed the current wallet balance for this currency.");
+        var row = await _walletDataService.GetWalletRow(walletId, currencyCode);
+        if (row == null)
+            throw new InvalidOperationException("Wallet row could not be read after withdraw.");
 
-        existingRow.Amount -= roundedAmount;
-
-        if (existingRow.Amount == 0)
+        if (row.Amount == 0)
         {
-            wallet.Rows.Remove(existingRow);
-            await _walletDataService.SaveChanges();
+            await _walletDataService.RemoveWalletRow(row.Id);
             return null;
         }
 
-        await _walletDataService.SaveChanges();
-        return new WalletRowDto
-        {
-            Id = existingRow.Id,
-            WalletId = existingRow.WalletId,
-            CurrencyCode = existingRow.CurrencyCode,
-            Amount = existingRow.Amount
-        };
+        return ConvertWalletRowToDto(row);
     }
 
     public async Task ExchangeAsync(Guid walletId, string sourceCurrencyCode, string targetCurrencyCode, decimal sourceAmount)
@@ -143,19 +122,24 @@ public class WalletService : IWalletService
             await _walletDataService.AddWalletRow(walletId, targetCurrencyCode, targetAmount);
     }
 
-    private WalletDto ConvertToDto(WalletEntity entity)
+    private WalletDto ConvertWalletToDto(WalletEntity entity)
     {
         return new WalletDto
         {
             Id = entity.Id,
             WalletName = entity.Name,
-            Rows = entity.Rows.Select(r => new WalletRowDto
-            {
-                Id = r.Id,
-                WalletId = r.WalletId,
-                CurrencyCode = r.CurrencyCode,
-                Amount = r.Amount
-            }).ToList()
+            Rows = entity.Rows.Select(r => ConvertWalletRowToDto(r)).ToList()
+        };
+    }
+
+    private WalletRowDto ConvertWalletRowToDto(WalletRowEntity entity)
+    {
+        return new WalletRowDto
+        {
+            Id = entity.Id,
+            WalletId = entity.WalletId,
+            CurrencyCode = entity.CurrencyCode,
+            Amount = entity.Amount
         };
     }
 }

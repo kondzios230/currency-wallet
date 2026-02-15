@@ -101,9 +101,4 @@ public sealed class WalletDataService : IWalletDataService
             .Include(w => w.Rows)
             .ToListAsync();
     }
-
-    public async Task SaveChanges()
-    {
-        await _context.SaveChangesAsync();
-    }
 }
