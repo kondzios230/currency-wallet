@@ -5,7 +5,7 @@ using Wallet.Api.Data.Models;
 
 namespace Wallet.Api.Data;
 
-public sealed class ExchangeRateDataService : IExchangeRatesDataService
+public sealed class ExchangeRatesDataService : IExchangeRatesDataService
 {
     private const string HttpClientName = "Nbp";
 
@@ -20,7 +20,7 @@ public sealed class ExchangeRateDataService : IExchangeRatesDataService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly AppDbContext _context;
 
-    public ExchangeRateDataService(IHttpClientFactory httpClientFactory, AppDbContext context)
+    public ExchangeRatesDataService(IHttpClientFactory httpClientFactory, AppDbContext context)
     {
         _httpClientFactory = httpClientFactory;
         _context = context;

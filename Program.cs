@@ -29,7 +29,7 @@ internal static class Program
         using (var scope = app.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            context.Database.EnsureCreated();
+            context.Database.Migrate();
         }
 
         app.UseStaticFiles();
@@ -48,7 +48,7 @@ internal static class Program
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IWalletDataService, WalletDataService>();
-        services.AddScoped<IExchangeRatesDataService, ExchangeRateDataService>();
+        services.AddScoped<IExchangeRatesDataService, ExchangeRatesDataService>();
 
         return services;
     }
