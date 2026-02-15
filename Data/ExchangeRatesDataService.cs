@@ -80,7 +80,12 @@ public sealed class ExchangeRateDataService : IExchangeRatesDataService
         {
             CurrencyCode = dto.CurrencyCode,
             Rate = dto.Rate
-        });
+        }).ToList();
+
+        if (!entities.Any(e => e.CurrencyCode == "PLN"))
+        {
+            entities.Add(new ExchangeRateEntity { CurrencyCode = "PLN", Rate = 1 });
+        }
 
         await _context.ExchangeRates.AddRangeAsync(entities);
         await _context.SaveChangesAsync();
@@ -89,5 +94,13 @@ public sealed class ExchangeRateDataService : IExchangeRatesDataService
     public async Task<bool> DoesCurrencyExists(string currencyCode)
     {
         return await _context.ExchangeRates.AnyAsync(e => e.CurrencyCode == currencyCode);
+    }
+
+    public async Task<decimal?> GetExchangeRateFromDb(string currencyCode)
+    {
+        var entity = await _context.ExchangeRates
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.CurrencyCode == currencyCode);
+        return entity?.Rate;
     }
 }

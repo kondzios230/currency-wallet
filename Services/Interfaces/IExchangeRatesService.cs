@@ -9,4 +9,6 @@ public interface IExchangeRatesService
     Task<IReadOnlyList<ExchangeRateDto>> RefreshExchangeRates();
 
     Task<bool> DoesCurrencyExists(string currencyCode);
+
+    Task<decimal?> GetExchangeRate(string currencyCode);
 }

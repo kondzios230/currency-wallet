@@ -92,4 +92,27 @@ public class WalletController : ControllerBase
                 : BadRequest(ex.Message);
         }
     }
+
+    [HttpPost]
+    public async Task<ActionResult> Exchange([FromBody] ExchangeRequestModel request)
+    {
+        try
+        {
+            if (request.SourceAmount <= 0)
+                throw new InvalidOperationException("Source amount must be positive.");
+
+            await _walletService.ExchangeAsync(
+                request.WalletId,
+                request.SourceCurrencyCode,
+                request.TargetCurrencyCode,
+                request.SourceAmount);
+            return Ok();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase)
+                ? NotFound(ex.Message)
+                : BadRequest(ex.Message);
+        }
+    }
 }

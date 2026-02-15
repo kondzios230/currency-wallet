@@ -11,4 +11,6 @@ public interface IExchangeRatesDataService
     Task SaveExchangeRatesAsync(IReadOnlyList<ExchangeRateEntity> exchangeRates);
 
     Task<bool> DoesCurrencyExists(string currencyCode);
+
+    Task<decimal?> GetExchangeRateFromDb(string currencyCode);
 }

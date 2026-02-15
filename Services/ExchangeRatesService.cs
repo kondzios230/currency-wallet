@@ -39,6 +39,14 @@ public class ExchangeRatesService : IExchangeRatesService
         return await _exchangeRateDataService.DoesCurrencyExists(currencyCode);
     }
 
+    public async Task<decimal?> GetExchangeRate(string currencyCode)
+    {
+        if (string.Equals(currencyCode, "PLN", StringComparison.OrdinalIgnoreCase))
+            return 1;
+
+        return await _exchangeRateDataService.GetExchangeRateFromDb(currencyCode);
+    }
+
     private List<ExchangeRateDto> ConvertToDto(IReadOnlyList<ExchangeRateEntity> rates)
     {
         var list = new List<ExchangeRateDto>();

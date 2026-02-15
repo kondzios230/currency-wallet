@@ -11,4 +11,6 @@ public interface IWalletService
     Task<WalletRowDto> TopUpWallet(Guid walletId, string currencyCode, decimal amount);
 
     Task<WalletRowDto?> WithdrawFromWallet(Guid walletId, string currencyCode, decimal amount);
+
+    Task ExchangeAsync(Guid walletId, string sourceCurrencyCode, string targetCurrencyCode, decimal sourceAmount);
 }
