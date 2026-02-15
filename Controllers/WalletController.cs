@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Wallet.Api.Controllers.Models;
 using Wallet.Api.Services.Interfaces;
+using Wallet.Api.Services.Models;
 
 namespace Wallet.Api.Controllers;
 
@@ -23,7 +24,7 @@ public class WalletController : ControllerBase
     public async Task<ActionResult<IEnumerable<WalletModel>>> GetWallets()
     {
         var result = await _walletService.GetAllWallets();
-        return Ok(result);
+        return Ok(result.Select(r => ConvertWalletToModel(r)));
     }
 
     [HttpGet("{walletId:guid}")]
@@ -32,7 +33,7 @@ public class WalletController : ControllerBase
         var wallet = await _walletService.GetWallet(walletId);
         if (wallet == null)
             return NotFound("Wallet not found.");
-        return Ok(wallet);
+        return Ok(ConvertWalletToModel(wallet));
     }
 
     [HttpPost]
@@ -41,7 +42,7 @@ public class WalletController : ControllerBase
         try
         {
             var wallet = await _walletService.CreateWallet(data.WalletName);
-            return Ok(wallet);
+            return Ok(ConvertWalletToModel(wallet));
         }
         catch (InvalidOperationException ex)
         {
@@ -77,7 +78,7 @@ public class WalletController : ControllerBase
                 throw new InvalidOperationException("Currency code is invalid.");
 
             var row = await _walletService.TopUpWallet(request.WalletId, request.CurrencyCode, request.Amount);
-            return Ok(row);
+            return Ok(ConvertWalletRowToModel(row));
         }
         catch (InvalidOperationException ex)
         {
@@ -99,7 +100,7 @@ public class WalletController : ControllerBase
                 throw new InvalidOperationException("Currency code is invalid.");
 
             var row = await _walletService.WithdrawFromWallet(request.WalletId, request.CurrencyCode, request.Amount);
-            return row == null ? NoContent() : Ok(row);
+            return row == null ? NoContent() : Ok(ConvertWalletRowToModel(row));
         }
         catch (InvalidOperationException ex)
         {
@@ -130,5 +131,26 @@ public class WalletController : ControllerBase
                 ? NotFound(ex.Message)
                 : BadRequest(ex.Message);
         }
+    }
+
+    private WalletModel ConvertWalletToModel(WalletDto dto)
+    {
+        return new WalletModel
+        {
+            Id = dto.Id,
+            WalletName = dto.WalletName,
+            Rows = dto.Rows.Select(r => ConvertWalletRowToModel(r)).ToList()
+        };
+    }
+
+    private WalletRowModel ConvertWalletRowToModel(WalletRowDto dto)
+    {
+        return new WalletRowModel
+        {
+            Id = dto.Id,
+            WalletId = dto.WalletId,
+            CurrencyCode = dto.CurrencyCode,
+            Amount = dto.Amount
+        };
     }
 }

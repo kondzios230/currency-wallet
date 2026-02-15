@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Wallet.Api.Controllers.Models;
 using Wallet.Api.Services.Interfaces;
+using Wallet.Api.Services.Models;
 
 namespace Wallet.Api.Controllers;
 
@@ -18,13 +19,22 @@ public class ExchangeRatesController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<ExchangeRateModel>>> GetExchangeRates()
     {
         var list = await _exchangeRatesService.GetExchangeRates();
-        return Ok(list);
+        return Ok(list.Select(r => ConvertToModel(r)).ToList());
     }
 
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<ExchangeRateModel>>> RefreshExchangeRates()
     {
         var list = await _exchangeRatesService.RefreshExchangeRates();
-        return Ok(list);
+        return Ok(list.Select(r => ConvertToModel(r)).ToList());
+    }
+
+    private static ExchangeRateModel ConvertToModel(ExchangeRateDto dto)
+    {
+        return new ExchangeRateModel
+        {
+            CurrencyCode = dto.CurrencyCode,
+            ExchangeRate = dto.ExchangeRate
+        };
     }
 }
