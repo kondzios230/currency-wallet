@@ -28,22 +28,22 @@ public sealed class ExchangeRatesRefreshHostedService : BackgroundService
 
         _logger.LogInformation("Exchange rates refresh started. Interval: {Interval} minutes.", intervalMinutes);
 
-        await RefreshRatesAsync();
+        await RefreshRatesAsync(stoppingToken);
 
         using var timer = new PeriodicTimer(TimeSpan.FromMinutes(intervalMinutes));
-        while (await timer.WaitForNextTickAsync().ConfigureAwait(false))
+        while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
         {
-            await RefreshRatesAsync();
+            await RefreshRatesAsync(stoppingToken);
         }
     }
 
-    private async Task RefreshRatesAsync()
+    private async Task RefreshRatesAsync(CancellationToken cancellationToken)
     {
         try
         {
             using var scope = _serviceProvider.CreateScope();
             var service = scope.ServiceProvider.GetRequiredService<IExchangeRatesService>();
-            await service.RefreshExchangeRates().ConfigureAwait(false);
+            await service.RefreshExchangeRates(cancellationToken).ConfigureAwait(false);
             _logger.LogDebug("Exchange rates refreshed successfully.");
         }
         catch (OperationCanceledException)

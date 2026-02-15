@@ -21,27 +21,27 @@ public class WalletController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<WalletModel>>> GetWallets()
+    public async Task<ActionResult<IEnumerable<WalletModel>>> GetWallets(CancellationToken cancellationToken)
     {
-        var result = await _walletService.GetAllWallets();
+        var result = await _walletService.GetAllWallets(cancellationToken);
         return Ok(result.Select(r => ConvertWalletToModel(r)));
     }
 
     [HttpGet("{walletId:guid}")]
-    public async Task<ActionResult<WalletModel>> GetWallet([FromRoute] Guid walletId)
+    public async Task<ActionResult<WalletModel>> GetWallet([FromRoute] Guid walletId, CancellationToken cancellationToken)
     {
-        var wallet = await _walletService.GetWallet(walletId);
+        var wallet = await _walletService.GetWallet(walletId, cancellationToken);
         if (wallet == null)
             return NotFound("Wallet not found.");
         return Ok(ConvertWalletToModel(wallet));
     }
 
     [HttpPost]
-    public async Task<ActionResult<WalletModel>> CreateWallet([FromBody] WalletModel data)
+    public async Task<ActionResult<WalletModel>> CreateWallet([FromBody] WalletModel data, CancellationToken cancellationToken)
     {
         try
         {
-            var wallet = await _walletService.CreateWallet(data.WalletName);
+            var wallet = await _walletService.CreateWallet(data.WalletName, cancellationToken);
             return Ok(ConvertWalletToModel(wallet));
         }
         catch (InvalidOperationException ex)
@@ -51,11 +51,11 @@ public class WalletController : ControllerBase
     }
 
     [HttpDelete("{walletId:guid}")]
-    public async Task<ActionResult> RemoveWallet([FromRoute] Guid walletId)
+    public async Task<ActionResult> RemoveWallet([FromRoute] Guid walletId, CancellationToken cancellationToken)
     {
         try
         {
-            await _walletService.RemoveWallet(walletId);
+            await _walletService.RemoveWallet(walletId, cancellationToken);
             return Ok();
         }
         catch (InvalidOperationException ex)
@@ -67,14 +67,14 @@ public class WalletController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<WalletRowModel>> TopUpWallet([FromBody] ModifyRowModel request)
+    public async Task<ActionResult<WalletRowModel>> TopUpWallet([FromBody] ModifyRowModel request, CancellationToken cancellationToken)
     {
         try
         {
-            if (!await _exchangeRatesService.DoesCurrencyExists(request.CurrencyCode))
+            if (!await _exchangeRatesService.DoesCurrencyExists(request.CurrencyCode, cancellationToken))
                 throw new InvalidOperationException("Currency code is invalid.");
 
-            var row = await _walletService.TopUpWallet(request.WalletId, request.CurrencyCode, request.Amount);
+            var row = await _walletService.TopUpWallet(request.WalletId, request.CurrencyCode, request.Amount, cancellationToken);
             return Ok(ConvertWalletRowToModel(row));
         }
         catch (InvalidOperationException ex)
@@ -86,14 +86,14 @@ public class WalletController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<WalletRowModel>> WithdrawFromWallet([FromBody] ModifyRowModel request)
+    public async Task<ActionResult<WalletRowModel>> WithdrawFromWallet([FromBody] ModifyRowModel request, CancellationToken cancellationToken)
     {
         try
         {
-            if (!await _exchangeRatesService.DoesCurrencyExists(request.CurrencyCode))
+            if (!await _exchangeRatesService.DoesCurrencyExists(request.CurrencyCode, cancellationToken))
                 throw new InvalidOperationException("Currency code is invalid.");
 
-            var row = await _walletService.WithdrawFromWallet(request.WalletId, request.CurrencyCode, request.Amount);
+            var row = await _walletService.WithdrawFromWallet(request.WalletId, request.CurrencyCode, request.Amount, cancellationToken);
             return row == null ? NoContent() : Ok(ConvertWalletRowToModel(row));
         }
         catch (InvalidOperationException ex)
@@ -105,7 +105,7 @@ public class WalletController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult> Exchange([FromBody] ExchangeRequestModel request)
+    public async Task<ActionResult> Exchange([FromBody] ExchangeRequestModel request, CancellationToken cancellationToken)
     {
         try
         {
@@ -113,7 +113,8 @@ public class WalletController : ControllerBase
                 request.WalletId,
                 request.SourceCurrencyCode,
                 request.TargetCurrencyCode,
-                request.SourceAmount);
+                request.SourceAmount,
+                cancellationToken);
             return Ok();
         }
         catch (InvalidOperationException ex)

@@ -18,12 +18,12 @@ public class ExchangeRatesService : IExchangeRatesService
         _accessLock = accessLock;
     }
 
-    public async Task<IReadOnlyList<ExchangeRateDto>> RefreshExchangeRates()
+    public async Task<IReadOnlyList<ExchangeRateDto>> RefreshExchangeRates(CancellationToken cancellationToken = default)
     {
-        var handle = await _accessLock.WaitAsync().ConfigureAwait(false);
+        var handle = await _accessLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            return await RefreshExchangeRatesCore().ConfigureAwait(false);
+            return await RefreshExchangeRatesCore(cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -31,14 +31,14 @@ public class ExchangeRatesService : IExchangeRatesService
         }
     }
 
-    public async Task<IReadOnlyList<ExchangeRateDto>> GetExchangeRates()
+    public async Task<IReadOnlyList<ExchangeRateDto>> GetExchangeRates(CancellationToken cancellationToken = default)
     {
-        var handle = await _accessLock.WaitAsync().ConfigureAwait(false);
+        var handle = await _accessLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var dbRates = await _exchangeRateDataService.GetExchangeRatesFromDB();
+            var dbRates = await _exchangeRateDataService.GetExchangeRatesFromDB(cancellationToken);
             if (!dbRates.Any())
-                return await RefreshExchangeRatesCore().ConfigureAwait(false);
+                return await RefreshExchangeRatesCore(cancellationToken).ConfigureAwait(false);
 
             return ConvertToDto(dbRates);
         }
@@ -48,12 +48,12 @@ public class ExchangeRatesService : IExchangeRatesService
         }
     }
 
-    public async Task<bool> DoesCurrencyExists(string currencyCode)
+    public async Task<bool> DoesCurrencyExists(string currencyCode, CancellationToken cancellationToken = default)
     {
-        var handle = await _accessLock.WaitAsync().ConfigureAwait(false);
+        var handle = await _accessLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            return await _exchangeRateDataService.DoesCurrencyExists(currencyCode);
+            return await _exchangeRateDataService.DoesCurrencyExists(currencyCode, cancellationToken);
         }
         finally
         {
@@ -61,14 +61,14 @@ public class ExchangeRatesService : IExchangeRatesService
         }
     }
 
-    public async Task<decimal?> GetExchangeRate(string currencyCode)
+    public async Task<decimal?> GetExchangeRate(string currencyCode, CancellationToken cancellationToken = default)
     {
-        var handle = await _accessLock.WaitAsync().ConfigureAwait(false);
+        var handle = await _accessLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             if (string.Equals(currencyCode, "PLN", StringComparison.OrdinalIgnoreCase))
                 return 1;
-            return await _exchangeRateDataService.GetExchangeRateFromDb(currencyCode);
+            return await _exchangeRateDataService.GetExchangeRateFromDb(currencyCode, cancellationToken);
         }
         finally
         {
@@ -76,10 +76,10 @@ public class ExchangeRatesService : IExchangeRatesService
         }
     }
 
-    private async Task<IReadOnlyList<ExchangeRateDto>> RefreshExchangeRatesCore()
+    private async Task<IReadOnlyList<ExchangeRateDto>> RefreshExchangeRatesCore(CancellationToken cancellationToken)
     {
-        var rates = await _exchangeRateDataService.GetExchangeRatesFromNbp();
-        await _exchangeRateDataService.SaveExchangeRatesAsync(rates);
+        var rates = await _exchangeRateDataService.GetExchangeRatesFromNbp(cancellationToken);
+        await _exchangeRateDataService.SaveExchangeRatesAsync(rates, cancellationToken);
         return ConvertToDto(rates);
     }
 

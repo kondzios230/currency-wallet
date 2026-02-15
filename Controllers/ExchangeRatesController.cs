@@ -16,16 +16,16 @@ public class ExchangeRatesController : ControllerBase
     public ExchangeRatesController(IExchangeRatesService exchangeRatesService) => _exchangeRatesService = exchangeRatesService;
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<ExchangeRateModel>>> GetExchangeRates()
+    public async Task<ActionResult<IReadOnlyList<ExchangeRateModel>>> GetExchangeRates(CancellationToken cancellationToken)
     {
-        var list = await _exchangeRatesService.GetExchangeRates();
+        var list = await _exchangeRatesService.GetExchangeRates(cancellationToken);
         return Ok(list.Select(r => ConvertToModel(r)).ToList());
     }
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<ExchangeRateModel>>> RefreshExchangeRates()
+    public async Task<ActionResult<IReadOnlyList<ExchangeRateModel>>> RefreshExchangeRates(CancellationToken cancellationToken)
     {
-        var list = await _exchangeRatesService.RefreshExchangeRates();
+        var list = await _exchangeRatesService.RefreshExchangeRates(cancellationToken);
         return Ok(list.Select(r => ConvertToModel(r)).ToList());
     }
 

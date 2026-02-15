@@ -19,16 +19,18 @@ public sealed class ExchangeRatesDataService : IExchangeRatesDataService
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly AppDbContext _context;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public ExchangeRatesDataService(IHttpClientFactory httpClientFactory, AppDbContext context)
+    public ExchangeRatesDataService(IHttpClientFactory httpClientFactory, AppDbContext context, IUnitOfWork unitOfWork)
     {
         _httpClientFactory = httpClientFactory;
         _context = context;
+        _unitOfWork = unitOfWork;
     }
 
-    public async Task<IReadOnlyList<ExchangeRateEntity>> GetExchangeRatesFromDB()
+    public async Task<IReadOnlyList<ExchangeRateEntity>> GetExchangeRatesFromDB(CancellationToken cancellationToken = default)
     {
-        var entities = await _context.ExchangeRates.AsNoTracking().ToListAsync();
+        var entities = await _context.ExchangeRates.AsNoTracking().ToListAsync(cancellationToken);
         return entities.Select(e => new ExchangeRateEntity
         {
             CurrencyCode = e.CurrencyCode,
@@ -36,14 +38,14 @@ public sealed class ExchangeRatesDataService : IExchangeRatesDataService
         }).ToList();
     }
 
-    public async Task<IReadOnlyList<ExchangeRateEntity>> GetExchangeRatesFromNbp()
+    public async Task<IReadOnlyList<ExchangeRateEntity>> GetExchangeRatesFromNbp(CancellationToken cancellationToken = default)
     {
         var client = _httpClientFactory.CreateClient(HttpClientName);
         try
         {
-            var response = await client.GetAsync(TableBUrl);
+            var response = await client.GetAsync(TableBUrl, cancellationToken);
 
-            var tables = await response.Content.ReadFromJsonAsync<NbpApiResponse[]>(JsonOptions);
+            var tables = await response.Content.ReadFromJsonAsync<NbpApiResponse[]>(JsonOptions, cancellationToken);
             if (tables is null || tables.Length == 0)
             {
                 return new List<ExchangeRateEntity>();
@@ -72,9 +74,11 @@ public sealed class ExchangeRatesDataService : IExchangeRatesDataService
         }
     }
 
-    public async Task SaveExchangeRatesAsync(IReadOnlyList<ExchangeRateEntity> exchangeRates)
+    public async Task SaveExchangeRatesAsync(IReadOnlyList<ExchangeRateEntity> exchangeRates, CancellationToken cancellationToken = default)
     {
-        await _context.ExchangeRates.ExecuteDeleteAsync();
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+
+        await _context.ExchangeRates.ExecuteDeleteAsync(cancellationToken);
 
         var entities = exchangeRates.Select(dto => new ExchangeRateEntity
         {
@@ -87,20 +91,21 @@ public sealed class ExchangeRatesDataService : IExchangeRatesDataService
             entities.Add(new ExchangeRateEntity { CurrencyCode = "PLN", Rate = 1 });
         }
 
-        await _context.ExchangeRates.AddRangeAsync(entities);
-        await _context.SaveChangesAsync();
+        await _context.ExchangeRates.AddRangeAsync(entities, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 
-    public async Task<bool> DoesCurrencyExists(string currencyCode)
+    public async Task<bool> DoesCurrencyExists(string currencyCode, CancellationToken cancellationToken = default)
     {
-        return await _context.ExchangeRates.AnyAsync(e => e.CurrencyCode == currencyCode);
+        return await _context.ExchangeRates.AnyAsync(e => e.CurrencyCode == currencyCode, cancellationToken);
     }
 
-    public async Task<decimal?> GetExchangeRateFromDb(string currencyCode)
+    public async Task<decimal?> GetExchangeRateFromDb(string currencyCode, CancellationToken cancellationToken = default)
     {
         var entity = await _context.ExchangeRates
             .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.CurrencyCode == currencyCode);
+            .FirstOrDefaultAsync(e => e.CurrencyCode == currencyCode, cancellationToken);
         return entity?.Rate;
     }
 }
