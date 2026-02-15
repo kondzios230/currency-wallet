@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Currency Wallet API – Verification</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 0 auto; padding: 1rem; }
+    h1 { margin-top: 0; }
+    h2 { border-bottom: 1px solid #ccc; padding-bottom: 0.25rem; margin-top: 1.5rem; }
+    h3 { font-size: 1rem; margin-bottom: 0.5rem; }
+    section.section { margin-bottom: 2rem; }
+    .endpoint { margin-bottom: 1.5rem; padding: 0.75rem; background: #f8f9fa; border-radius: 6px; }
+    .endpoint label { display: inline-block; min-width: 6rem; margin-right: 0.5rem; }
+    .endpoint input { padding: 0.35rem 0.5rem; margin-right: 0.5rem; margin-bottom: 0.5rem; }
+    .endpoint button { padding: 0.4rem 0.75rem; cursor: pointer; margin-right: 0.5rem; margin-bottom: 0.5rem; }
+    .result { margin-top: 0.5rem; padding: 0.5rem; background: #fff; border: 1px solid #ddd; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 0.85rem; white-space: pre-wrap; word-break: break-all; min-height: 2rem; }
+    .result.error { background: #fff5f5; border-color: #e0b0b0; }
+    .result.success { background: #f5fff5; border-color: #b0e0b0; }
+  </style>
+</head>
+<body>
+  <h1>Currency Wallet API – Verification</h1>
+  <p>Use this page to verify ExchangeRates and Wallet endpoints. All requests use the same origin as this page.</p>
+
+  <section class="section">
+    <h2>Exchange rates</h2>
+
+    <div class="endpoint">
+      <h3>Get exchange rates</h3>
+      <button type="button" id="btn-get-rates">Get exchange rates</button>
+      <div class="result" id="result-get-rates" data-status></div>
+    </div>
+
+    <div class="endpoint">
+      <h3>Refresh exchange rates</h3>
+      <button type="button" id="btn-refresh-rates">Refresh exchange rates</button>
+      <div class="result" id="result-refresh-rates" data-status></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Wallets</h2>
+
+    <div class="endpoint">
+      <h3>Get all wallets</h3>
+      <button type="button" id="btn-get-wallets">Get wallets</button>
+      <div class="result" id="result-get-wallets" data-status></div>
+    </div>
+
+    <div class="endpoint">
+      <h3>Get wallet by ID</h3>
+      <label for="input-get-wallet-id">Wallet ID</label><input type="text" id="input-get-wallet-id" placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000">
+      <button type="button" id="btn-get-wallet">Get wallet</button>
+      <div class="result" id="result-get-wallet" data-status></div>
+    </div>
+
+    <div class="endpoint">
+      <h3>Create wallet</h3>
+      <label for="input-create-name">Wallet name</label><input type="text" id="input-create-name" placeholder="My wallet">
+      <button type="button" id="btn-create-wallet">Create wallet</button>
+      <div class="result" id="result-create-wallet" data-status></div>
+    </div>
+
+    <div class="endpoint">
+      <h3>Remove wallet</h3>
+      <label for="input-remove-wallet-id">Wallet ID</label><input type="text" id="input-remove-wallet-id" placeholder="GUID">
+      <button type="button" id="btn-remove-wallet">Remove wallet</button>
+      <div class="result" id="result-remove-wallet" data-status></div>
+    </div>
+
+    <div class="endpoint">
+      <h3>Top up wallet</h3>
+      <label for="input-topup-wallet-id">Wallet ID</label><input type="text" id="input-topup-wallet-id" placeholder="GUID"><br>
+      <label for="input-topup-currency">Currency</label><input type="text" id="input-topup-currency" placeholder="e.g. USD" maxlength="3"><br>
+      <label for="input-topup-amount">Amount</label><input type="number" id="input-topup-amount" placeholder="100" step="any" min="0">
+      <button type="button" id="btn-topup">Top up</button>
+      <div class="result" id="result-topup" data-status></div>
+    </div>
+
+    <div class="endpoint">
+      <h3>Withdraw from wallet</h3>
+      <label for="input-withdraw-wallet-id">Wallet ID</label><input type="text" id="input-withdraw-wallet-id" placeholder="GUID"><br>
+      <label for="input-withdraw-currency">Currency</label><input type="text" id="input-withdraw-currency" placeholder="e.g. USD" maxlength="3"><br>
+      <label for="input-withdraw-amount">Amount</label><input type="number" id="input-withdraw-amount" placeholder="50" step="any" min="0">
+      <button type="button" id="btn-withdraw">Withdraw</button>
+      <div class="result" id="result-withdraw" data-status></div>
+    </div>
+
+    <div class="endpoint">
+      <h3>Exchange</h3>
+      <label for="input-exchange-wallet-id">Wallet ID</label><input type="text" id="input-exchange-wallet-id" placeholder="GUID"><br>
+      <label for="input-source-currency">Source currency</label><input type="text" id="input-source-currency" placeholder="USD" maxlength="3"><br>
+      <label for="input-target-currency">Target currency</label><input type="text" id="input-target-currency" placeholder="EUR" maxlength="3"><br>
+      <label for="input-source-amount">Source amount</label><input type="number" id="input-source-amount" placeholder="100" step="any" min="0">
+      <button type="button" id="btn-exchange">Exchange</button>
+      <div class="result" id="result-exchange" data-status></div>
+    </div>
+  </section>
+
+  <script>
+    function showResult(el, ok, status, body) {
+      el.setAttribute('data-status', status);
+      el.textContent = body;
+      el.classList.remove('error', 'success');
+      el.classList.add(ok ? 'success' : 'error');
+    }
+
+    function formatBody(text, contentType) {
+      if (!text) return '(empty)';
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          return JSON.stringify(JSON.parse(text), null, 2);
+        } catch (_) { return text; }
+      }
+      return text;
+    }
+
+    async function request(resultId, method, url, body) {
+      const el = document.getElementById(resultId);
+      el.textContent = 'Loading…';
+      el.classList.remove('error', 'success');
+      try {
+        const opts = { method, headers: {} };
+        if (body != null) {
+          opts.headers['Content-Type'] = 'application/json';
+          opts.body = typeof body === 'string' ? body : JSON.stringify(body);
+        }
+        const res = await fetch(url, opts);
+        const text = await res.text();
+        const ok = res.ok;
+        const status = res.status + ' ' + res.statusText;
+        const formatted = formatBody(text, res.headers.get('Content-Type'));
+        showResult(el, ok, status, status + '\n\n' + formatted);
+      } catch (err) {
+        showResult(el, false, 'Error', 'Error: ' + err.message);
+      }
+    }
+
+    document.getElementById('btn-get-rates').addEventListener('click', function () {
+      request('result-get-rates', 'GET', '/api/ExchangeRates/GetExchangeRates');
+    });
+    document.getElementById('btn-refresh-rates').addEventListener('click', function () {
+      request('result-refresh-rates', 'GET', '/api/ExchangeRates/RefreshExchangeRates');
+    });
+
+    document.getElementById('btn-get-wallets').addEventListener('click', function () {
+      request('result-get-wallets', 'GET', '/api/Wallet/GetWallets');
+    });
+
+    document.getElementById('btn-get-wallet').addEventListener('click', function () {
+      const id = document.getElementById('input-get-wallet-id').value.trim();
+      if (!id) { showResult(document.getElementById('result-get-wallet'), false, '—', 'Enter a wallet ID (GUID).'); return; }
+      request('result-get-wallet', 'GET', '/api/Wallet/GetWallet/' + id);
+    });
+
+    document.getElementById('btn-create-wallet').addEventListener('click', function () {
+      const name = document.getElementById('input-create-name').value.trim();
+      request('result-create-wallet', 'POST', '/api/Wallet/CreateWallet', { walletName: name || 'New wallet' });
+    });
+
+    document.getElementById('btn-remove-wallet').addEventListener('click', function () {
+      const id = document.getElementById('input-remove-wallet-id').value.trim();
+      if (!id) { showResult(document.getElementById('result-remove-wallet'), false, '—', 'Enter a wallet ID (GUID).'); return; }
+      request('result-remove-wallet', 'DELETE', '/api/Wallet/RemoveWallet/' + id);
+    });
+
+    document.getElementById('btn-topup').addEventListener('click', function () {
+      const walletId = document.getElementById('input-topup-wallet-id').value.trim();
+      const currencyCode = document.getElementById('input-topup-currency').value.trim();
+      const amount = parseFloat(document.getElementById('input-topup-amount').value, 10);
+      if (!walletId || !currencyCode) {
+        showResult(document.getElementById('result-topup'), false, '—', 'Enter wallet ID and currency code.');
+        return;
+      }
+      if (isNaN(amount) || amount <= 0) {
+        showResult(document.getElementById('result-topup'), false, '—', 'Enter a positive amount.');
+        return;
+      }
+      request('result-topup', 'POST', '/api/Wallet/TopUpWallet', { walletId, currencyCode, amount });
+    });
+
+    document.getElementById('btn-withdraw').addEventListener('click', function () {
+      const walletId = document.getElementById('input-withdraw-wallet-id').value.trim();
+      const currencyCode = document.getElementById('input-withdraw-currency').value.trim();
+      const amount = parseFloat(document.getElementById('input-withdraw-amount').value, 10);
+      if (!walletId || !currencyCode) {
+        showResult(document.getElementById('result-withdraw'), false, '—', 'Enter wallet ID and currency code.');
+        return;
+      }
+      if (isNaN(amount) || amount <= 0) {
+        showResult(document.getElementById('result-withdraw'), false, '—', 'Enter a positive amount.');
+        return;
+      }
+      request('result-withdraw', 'POST', '/api/Wallet/WithdrawFromWallet', { walletId, currencyCode, amount });
+    });
+
+    document.getElementById('btn-exchange').addEventListener('click', function () {
+      const walletId = document.getElementById('input-exchange-wallet-id').value.trim();
+      const sourceCurrencyCode = document.getElementById('input-source-currency').value.trim();
+      const targetCurrencyCode = document.getElementById('input-target-currency').value.trim();
+      const sourceAmount = parseFloat(document.getElementById('input-source-amount').value, 10);
+      if (!walletId || !sourceCurrencyCode || !targetCurrencyCode) {
+        showResult(document.getElementById('result-exchange'), false, '—', 'Enter wallet ID, source and target currency.');
+        return;
+      }
+      if (isNaN(sourceAmount) || sourceAmount <= 0) {
+        showResult(document.getElementById('result-exchange'), false, '—', 'Enter a positive source amount.');
+        return;
+      }
+      request('result-exchange', 'POST', '/api/Wallet/Exchange', {
+        walletId,
+        sourceCurrencyCode,
+        targetCurrencyCode,
+        sourceAmount
+      });
+    });
+  </script>
+</body>
+</html>
